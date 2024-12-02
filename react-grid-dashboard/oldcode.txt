@@ -1,0 +1,185 @@
+import React, { useState, useEffect } from 'react';
+import RGL, { Responsive, WidthProvider } from 'react-grid-layout';
+
+const ReactGridLayout = WidthProvider(Responsive);
+
+const MyLayout = () => {
+  // State to manage the layout of widgets within different sections and we can have more sections
+  const [widgetLayouts, setWidgetLayouts] = useState({
+    section1: [
+      { i: 'widget1', x: 0, y: 0, w: 4, h: 4 },
+      { i: 'widget2', x: 4, y: 0, w: 4, h: 4 },
+      { i: 'widget3', x: 8, y: 0, w: 4, h: 4 },
+    ],
+    section2: [
+      { i: 'widget4', x: 0, y: 0, w: 4, h: 4 },
+      { i: 'widget5', x: 4, y: 0, w: 4, h: 4 },
+      { i: 'widget6', x: 8, y: 0, w: 4, h: 4 },
+    ],
+  });
+
+  // State to keep track of which widget is being dragged
+  const [draggedWidget, setDraggedWidget] = useState(null);
+
+
+  // Function to handle the start of a drag event
+  const onDragStart = (widgetId, sourceSection) => {
+    setDraggedWidget({ widgetId, sourceSection }); // Store the dragged widget's details
+  };
+
+  // Check if a widget is already in a specific section
+  const isWidgetInSection = (widgetId, section) => {
+    return widgetLayouts[section].some((widget) => widget.i === widgetId);
+  };
+
+  // Function to calculate the next available position in a target section
+  const getNextPosition = (targetSection) => {
+    const targetWidgets = widgetLayouts[targetSection];
+    let nextX = 0;
+    let nextY = 0;
+
+    // If there are widgets in the section, find the next available X and Y position
+    if (targetWidgets.length > 0) {
+      const lastWidget = targetWidgets[targetWidgets.length - 1];
+      nextX = lastWidget.x + lastWidget.w; // Place the new widget next to the last one
+
+      // If it exceeds the maximum width, move to the next row (Y position)
+      if (nextX >= 12) {
+        nextX = 0;
+        nextY = Math.max(...targetWidgets.map((widget) => widget.y + widget.h));
+      }
+    }
+
+    return { x: nextX, y: nextY }; // Return the next X and Y position
+  };
+
+  // Function to handle the drop event when a widget is dropped in a new section
+  const onDrop = (targetSection) => {
+    if (draggedWidget) {
+      const { widgetId, sourceSection } = draggedWidget;
+      console.log('draggedWidget',draggedWidget)
+
+      // Prevent removal of the last widget from Section 1
+      if (sourceSection === 'section1' && widgetLayouts[sourceSection].length === 1) {
+        return;
+      }
+
+      // Ensure the widget isn't already in the target section
+      if (isWidgetInSection(widgetId, targetSection)) {
+        return;
+      }
+
+      // Prevent removal if it's the only widget in the section (compulsory widget logic)
+      if (sourceSection === 'section1' && widgetLayouts[sourceSection].length <= 1) {
+        return;
+      }
+      if (sourceSection === 'section2' && widgetLayouts[sourceSection].length <= 1) {
+        return;
+      }
+      // Remove the widget from the source section
+      const sourceWidgets = widgetLayouts[sourceSection].filter(
+        (widget) => widget.i !== widgetId
+      );
+
+      // Create a new widget object for the target section
+      const targetWidgets = [...widgetLayouts[targetSection]];
+      const { x, y } = getNextPosition(targetSection);
+
+      // Find the dragged widget's size
+      const draggedWidgetSize = widgetLayouts[sourceSection].find(
+        (widget) => widget.i === widgetId
+      );
+
+      // Create the new widget to be added to the target section
+      const newWidget = {
+        i: widgetId,
+        x,
+        y,
+        w: draggedWidgetSize?.w || 4, // Default width 
+        h: draggedWidgetSize?.h || 4, // Default height
+      };
+
+      // Update the layout state with the new widget positions
+      setWidgetLayouts((prevLayouts) => {
+        return {
+          ...prevLayouts,
+          [sourceSection]: sourceWidgets, // Update the source section layout
+          [targetSection]: [...targetWidgets, newWidget], // Add the new widget to the target section
+        };
+      });
+
+      // Clear the dragged widget state
+      setDraggedWidget(null);
+    }
+  };
+
+  return (
+    <div>
+      {/* Section 1 - Main grid section */}
+      <div
+        className="section"
+        style={{ border: '2px solid #ccc', padding: '10px' }}
+        onDragOver={(e) => e.preventDefault()} // Allow dropping by preventing default behavior
+        onDrop={() => onDrop('section1')} // Handle the drop event for Section 1
+      >
+        <h3>Section 1</h3>
+        <ReactGridLayout
+          className="layout"
+          layouts={{ lg: widgetLayouts.section1 }} // Set the layout for Section 1
+          cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }} // Define number of columns for different screen sizes
+          rowHeight={30} // Height of each row
+          isDraggable={false} // Disable dragging within this grid
+          isResizable={true} // Enable resizing widgets
+        
+        >
+          {/* Render each widget inside Section 1 */}
+          {widgetLayouts.section1.map((widget) => (
+            <div
+              key={widget.i}
+              className="grid-item"
+              style={{ border: '2px solid #ccc', background: '#fafafa' }}
+              draggable
+              
+              onDragStart={() => onDragStart(widget.i, 'section1')} // Set drag event for Section 1 widgets
+            >
+              {widget.i} {/* Display the widget ID */}
+            </div>
+          ))}
+        </ReactGridLayout>
+      </div>
+
+      {/* Section 2 - Another main grid section */}
+      <div
+        className="section"
+        style={{ border: '2px solid #ccc', padding: '10px' }}
+        onDragOver={(e) => e.preventDefault()} // Allow dropping by preventing default behavior
+        onDrop={() => onDrop('section2')} // Handle the drop event for Section 2
+      >
+        <h3>Section 2</h3>
+        <ReactGridLayout
+          className="layout"
+          layouts={{ lg: widgetLayouts.section2 }} // Set the layout for Section 2
+          cols={{ lg: 12, md: 10, sm: 6 }} 
+          rowHeight={30} 
+          isDraggable={false} 
+          isResizable={true}
+        >
+          {/* Render each widget inside Section 2 */}
+          {widgetLayouts.section2.map((widget) => (
+            <div
+              key={widget.i}
+              className="grid-item"
+              style={{ border: '2px solid #ccc', background: '#e8f5e9' }}
+              draggable
+              onDragStart={() => onDragStart(widget.i, 'section2')} 
+            >
+              {widget.i} 
+            </div>
+          ))}
+        </ReactGridLayout>
+      </div>
+    </div>
+  );
+};
+
+export default MyLayout;

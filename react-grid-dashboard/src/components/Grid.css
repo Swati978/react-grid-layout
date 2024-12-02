@@ -1,0 +1,9 @@
+/* Add this CSS to your stylesheet */ 
+
+.grid-item:hover { background-color: inherit !important;
+}
+     /* Ensures background color doesn't change on hover */
+
+     .react-grid-layout .react-grid-item.react-grid-placeholder { background: transparent !important;
+      }
+       /* Transparent background for placeholders */
